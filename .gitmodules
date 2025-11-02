@@ -1,0 +1,3 @@
+[submodule "truthbrush"]
+	path = truthbrush
+	url = https://github.com/stanfordio/truthbrush.git
