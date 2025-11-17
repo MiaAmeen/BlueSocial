@@ -1,3 +1,11 @@
 numpy
 pandas
 textblob
+google
+google-genai
+detoxify
+pandas
+textblob
+dotenv
+curl_cffi
+loguru
