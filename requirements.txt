@@ -9,3 +9,4 @@ textblob
 dotenv
 curl_cffi
 loguru
+wordcloud
