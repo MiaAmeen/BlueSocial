@@ -10,3 +10,5 @@ dotenv
 curl_cffi
 loguru
 wordcloud
+plotly
+seaborn

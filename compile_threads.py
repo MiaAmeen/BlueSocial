@@ -93,7 +93,7 @@ def combine_csv(type):
 
 ## LAST EXECUTION: new_truths.csv and new_authors.csv had 1722 rows.
 def main():
-  # compile_thread()
-  combine_csv("truths")
+  compile_thread()
+  # combine_csv("truths")
 
 main()
