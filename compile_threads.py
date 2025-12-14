@@ -1,20 +1,24 @@
-import numpy
+import numpy as np
 import pandas as pd
 from api import Api as truthbrush
 import os
 import csv
-import glob
 
-# LOAD THE DATA
-HOME = "/Users/destroyerofworlds/Desktop/NLP/PROJECT/BlueSocial/truth_social/"
+'''
+COLUMNS: 'url', 'external_id', 'timestamp', 'author_username', 'associated_tags',
+      'tagged_accounts', 'status_links', 'media_urls', 'like_count',
+      'reply_count', 'retruth_count', 'is_quote', 'is_retruth', 'is_reply',
+      'replying_to', 'status', 'Keyword', 'Scraping Date'
+'''
+HOME = "./new_data/"
+DATASET = "/Users/destroyerofworlds/Desktop/NLP/PROJECT/BlueSocial/truthsocial2024.xlsx"
+SCRAPE_LOG = HOME + "./scrape_log.csv"
 
 # Column names
 URL = "url"
-ARG_BOOL = "AM_label"
-IS_URL = "is_url"
+ID = "external_id"
 REPLIES = "reply_count"
-NG = "Sanity Check"
-SCRAPED = "comments_scraped"
+LIKES = "like_count"
 
 # New Truth/Author Files
 NEW_TRUTHS = HOME + "new_truths.csv"
@@ -30,6 +34,7 @@ username = os.getenv("TRUTHSOCIAL_USERNAME")
 password = os.getenv("TRUTHSOCIAL_PASSWORD")
 API = truthbrush(username=username, password=password)
 
+
 def get_comments(post_url):
   '''
   Fetch comments from Truth Social using truthbrush.
@@ -39,9 +44,9 @@ def get_comments(post_url):
   
   for comment_obj in comment_objs:
     write_truth(comment_obj, NEW_TRUTHS, TRUTH_FIELDS, parent_id=post_url)
-    # TODO: AVOID DUPLICATE AUTHORS !!!!!
-    write_truth(comment_obj["account"], NEW_AUTHORS, AUTHOR_FIELDS)
-      
+    write_truth(comment_obj["account"], NEW_AUTHORS, AUTHOR_FIELDS) # Note: this does not check for duplicates
+
+
 def write_truth(obj, file, fields, parent_id=None):
   with open(file, "a", newline="", encoding="utf-8") as f:
     writer = csv.DictWriter(f, fieldnames=fields)
@@ -50,11 +55,12 @@ def write_truth(obj, file, fields, parent_id=None):
     writer.writerow(row)
     f.flush()
 
-def meets_inclusion_criteria(row):
-  return row[ARG_BOOL] == 1 and row[REPLIES] >= 5 and row[NG] != 1 and row[IS_URL] == 1 \
-    and row[SCRAPED] == 0
 
-def compile_thread():
+def meets_inclusion_criteria(row):
+  return (row[REPLIES] >= 3)
+
+
+def compile_thread(seed=None):
   for path, fields in [(NEW_TRUTHS, TRUTH_FIELDS), (NEW_AUTHORS, AUTHOR_FIELDS)]:
     if not os.path.exists(path):
       with open(path, "w", newline="", encoding="utf-8") as f:
@@ -62,38 +68,39 @@ def compile_thread():
         writer.writeheader()
         f.flush()
 
-  TRUTHS = HOME + "truths_cleaned_tagged.xlsx"
-  truths_df = pd.read_excel(TRUTHS, sheet_name="popularity_cutoff").sample(frac=1, random_state=42).reset_index(drop=True)
-  print(len(truths_df), "truths loaded.")
+  truths_df = pd.read_excel(DATASET).sample(frac=1, random_state=42).reset_index(drop=True)
+  if seed: truths_df = truths_df[truths_df.index % 10 == seed]
+
+  scrape_log = pd.read_csv(SCRAPE_LOG)
+  SCRAPED = set(scrape_log.loc[scrape_log["scraped"] != "", "index"])
 
   for idx, row in truths_df.iterrows():
-    if not meets_inclusion_criteria(row): continue
+    if idx in SCRAPED or not meets_inclusion_criteria(row):
+      continue
     
     try:
       get_comments(row[URL])
-      truths_df.at[idx, SCRAPED] = 1
-
+      success = 1
     except Exception as e:
       print(f"Error processing {row[URL]}:", e)
-      truths_df.at[idx, SCRAPED] = -1
-    
-    truths_df.to_csv(HOME + "truthbrush.csv", index=False)
+      success = 0
 
-def combine_csv(type):
-  files = glob.glob(f"./new_data/new_{type}*.csv")
+    scrape_log.loc[scrape_log["index"] == idx, "scraped"] = success
+    scrape_log.to_csv(SCRAPE_LOG, index=False)
+    SCRAPED.add(idx)
 
-  dfs = []
-  for f in files:
-    df = pd.read_csv(f)
-    dfs.append(df)
-
-  all_data = pd.concat(dfs, ignore_index=True)
-  if type == "authors": all_data = all_data.drop_duplicates(subset=["username"])
-  all_data.to_csv(f"new_{type}.csv", index=False)
-
-## LAST EXECUTION: new_truths.csv and new_authors.csv had 1722 rows.
 def main():
-  compile_thread()
-  # combine_csv("truths")
+  import argparse
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+      "--idx_seed",
+      type=int,
+      required=True,
+  )
+  args = parser.parse_args()
 
-main()
+  compile_thread(args.idx_seed)
+
+
+if __name__ == "__main__":
+  main()

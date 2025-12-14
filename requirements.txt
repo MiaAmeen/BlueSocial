@@ -5,10 +5,5 @@ google
 google-genai
 detoxify
 pandas
-textblob
 dotenv
 curl_cffi
-loguru
-wordcloud
-plotly
-seaborn

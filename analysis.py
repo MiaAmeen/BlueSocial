@@ -27,6 +27,7 @@ lIKES = "like_count"
 COMMENTS = "num_comments"
 USER = "profile_url"
 URL = "url"
+ID = "external_id"
   
 
 def word_clouds(df):
@@ -34,13 +35,13 @@ def word_clouds(df):
   import matplotlib.pyplot as plt
 
   mask = np.array(
-    ImageOps.invert(Image.open("/Users/destroyerofworlds/Desktop/NLP/PROJECT/reddit_logo.png").convert("L"))
+    ImageOps.invert(Image.open("/Users/destroyerofworlds/Desktop/NLP/PROJECT/truth_logo.png").convert("L"))
   )
-  texts = df["comment_body"].dropna().tolist()
+  texts = df["text"].dropna().tolist()
   combined_text = " ".join(texts)
 
-  wordcloud = WordCloud(width=1000, height=1000, background_color="#f5e4ff",
-                        colormap="Purples", contour_width=2, contour_color="#1f0032", mask=mask).generate(combined_text)
+  wordcloud = WordCloud(width=1000, height=1000, background_color="#ffe4e4",
+                        colormap="Reds", contour_width=2, contour_color="#320000", mask=mask).generate(combined_text)
 
   plt.figure(figsize=(10, 5))
   plt.imshow(wordcloud, interpolation='bilinear')
@@ -96,13 +97,13 @@ def build_conversation_threads(df):
   df = df[df["stance_label"].isin(["FOR", "AGAINST"])].copy()
 
   # Build a lookup dict: id -> row
-  lookup = df.set_index("id").to_dict("index")
+  lookup = df.set_index(ID).to_dict("index")
   rows = []
 
   # Step 1: loop through all last comments (nth_comment == "n")
   last_comments = df[df["nth_comment"] == "n"]
   for _, last_row in last_comments.iterrows():
-    last_id = last_row["id"]
+    last_id = last_row[ID]
     last_stance = last_row["stance_label"]
 
     # Step 2: get second-to-last by following one hop
@@ -212,12 +213,6 @@ def sankey():
   print("Sankey diagram created and saved as stance_sankey_3step.html")
 
 
-import pandas as pd
-import matplotlib.pyplot as plt
-
-import pandas as pd
-import matplotlib.pyplot as plt
-
 def bar_graph():
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -227,10 +222,10 @@ def bar_graph():
     comments = comments.dropna(subset=["nth_comment", "p_label"])
     
     # Load posts and filter
-    posts = pd.read_excel(HOME + "ANALYSIS.xlsx")
+    posts = pd.read_excel(HOME + "ARGUMENTS.xlsx")
     posts = posts[
         (posts['comments_scraped'] == 1) &
-        (posts['num_comments'] > 4) &
+        # (posts['num_comments'] > 4) &
         (posts['PM_label'].notna()) &
         (posts['PM_label'] != "")
     ]
@@ -268,7 +263,6 @@ def bar_graph():
     
     # Colors and full names for legend
     colors = {"e": "#8E44AD", "p": "#3498DB", "l": "#E74C3C"}  # purple, blue, red
-    full_names = {"e": "Ethos", "p": "Pathos", "l": "Logos"}
     
     # Plot
     ax = percent_df.plot(
@@ -282,8 +276,9 @@ def bar_graph():
     ax.set_title("Evolution of Persuasion Modes Across Comment Levels")
     
     # Update legend with full names
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles, [full_names[label] for label in labels], title="Persuasion Mode")
+    # handles, labels = ax.get_legend_handles_labels()
+    # full_names = {"e": "Ethos", "p": "Pathos", "l": "Logos"}
+    # ax.legend(handles, [full_names[label] for label in labels], title="Persuasion Mode")
     
     plt.xticks(rotation=0)
     plt.tight_layout()
@@ -293,9 +288,9 @@ def bar_graph():
 def main():
   # df = pd.read_excel(input_file)
   # print(len(df), "rows loaded.")
-  # df = pd.read_csv("/Users/destroyerofworlds/Desktop/NLP/PROJECT/reddit_arguments.csv")
-  # df = df.drop_duplicates(subset = ["comment_body", "root_comment_id"])
-  # df = df[df["argument_annotation"] == "ARGUMENT"]
+  # df = pd.read_excel("/Users/destroyerofworlds/Desktop/NLP/PROJECT/BlueSocial/ARGUMENTS.xlsx")
+  # df = df.drop_duplicates(subset = ["text", "profile_url"])
+  # df = df[df["AM_label"] == 1]
   # word_clouds(df)
   # regression_features()
   # sankey()

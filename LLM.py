@@ -31,6 +31,7 @@ AM = "AM_output"
 STANCE = "stance_output"
 IS_URL = "is_url"
 NG = "Sanity Check"
+in_reply_to = "in_reply_to_id"
 
 # LLM stuff
 AM_SYSTEM_PROMPT = """I need you to help me annotate some political tweets. Your task is to determine whether a given tweet contains an argument and, if so, to identify the primary mode(s) of persuasion employed.
@@ -47,8 +48,8 @@ You may find advertisements in tweets promoting a user's content. Even though th
 Here are some examples:
 
 Tweets: [
-[id: 1, text: 'I think cannabis should be legalized because it has real medical benefits!'],
-[id: 2, text: 'I love donald trump'],
+[id: 1, text: "I think cannabis should be legalized because it has real medical benefits!"],
+[id: 2, text: "I love donald trump"],
 ]
 
 Output: [
@@ -169,24 +170,21 @@ def has_meaningful_text(text):
     
     return bool(re.search(r"[A-Za-z]", text_clean)) # Check if any alphabetic characters remain
 
-
 def meets_inclusion_criteria(row):
-  return has_meaningful_text(row["text"]) and row["reply_count"] >= 5 and \
-  (row["AM_label"] == "" or pd.isna(row["AM_label"])) and (row["AM_output"] == "" or pd.isna(row["AM_output"]))
-# and row["comments_scraped"] == 1 and row["AM_label"] == 1
+#   return has_meaningful_text(row["text"]) and row["reply_count"] >= 5 and \
+#   (row["AM_label"] == "" or pd.isna(row["AM_label"])) and (row["AM_output"] == "" or pd.isna(row["AM_output"]))
+    return row["AM_label"] == 1
 
 def argument_mine(df):
 
     def extract_output(input_indices, output):
-        pattern = r"\[id:\s*(\d+),\s*annotation:\s*(.*?)\]"
+        pattern = r"\[id:\s*(\d+),\s*annotation:\s*(.*?)\],"
         matches = re.findall(pattern, output, flags=re.DOTALL)
-
-        match_dict = {int(pid): ann.strip() for pid, ann in matches}
+        match_dict = {int(post_id): annotation.strip() for post_id, annotation in matches}
         for idx, post_id in input_indices.items():
-            post_id = int(post_id)
-
             if post_id in match_dict:
                 df.loc[idx, AM] = match_dict[post_id]
+                print(f"{post_id}, {match_dict[post_id]}")
             else:
                 df.loc[idx, AM] = "ERROR: HALLUCINATION"
         df.to_csv(HOME + "gemini_argmine.csv", index=False)
@@ -196,16 +194,14 @@ def argument_mine(df):
 
     eligible_indices = [idx for idx, row in df.iterrows() if meets_inclusion_criteria(row)]
     batch_size = 10
-
     for start in range(0, len(eligible_indices), batch_size):
         batch_idxs = eligible_indices[start:start + batch_size]
 
         input_str = ""
         input_indices = {}
-
         for idx in batch_idxs:
             row = df.loc[idx]
-            ext_id = row['external_id']
+            ext_id = int(row['external_id'])
             input_indices[idx] = ext_id
             input_str += f"[id: {ext_id}, text: \"{row['text'].replace('"', "'")}\"]\n"
 
@@ -228,15 +224,15 @@ def argument_mine(df):
     return df
 
 
-def stance_detect(df):
+def stance_detect(df, comments):
     def extract_output(output):
         # 1. Extract all [id: ..., Stance: "..."] blocks using regex
         pattern = r"\[id:\s*(\d+),\s*Stance:\s*\"(.*?)\"\]"
         matches = re.findall(pattern, output, flags=re.DOTALL)
         for comment_id, stance_text in matches:
             comment_id = int(comment_id)
-            if comment_id in comments[id_col].values:
-                comments.loc[comments[id_col] == comment_id, STANCE] = stance_text
+            if comment_id in comments[EXT_ID].values:
+                comments.loc[comments[EXT_ID] == comment_id, STANCE] = stance_text
         comments.to_csv(HOME + "new_truths_stances.csv", index=False)
 
     batch_size = 30
@@ -254,7 +250,7 @@ def stance_detect(df):
                 batch = curr_comments.iloc[i:i + batch_size]
                 formatted_tweets = []
                 for _, c in batch.iterrows():
-                    formatted_tweets.append(f'[id: {c["id"]}, Response: "{json.dumps(c["content"])}"]')
+                    formatted_tweets.append(f'[id: {c[EXT_ID]}, Response: "{json.dumps(c["content"])}"]')
                 tweets_str = ",\n".join(formatted_tweets)
 
                 input_str = STANCE_USER_PROMPT.format(
@@ -272,7 +268,7 @@ def stance_detect(df):
     return df
 
 
-def get_comment_levels(parent_id, reply_lookup):
+def get_comment_levels(comments, parent_id, reply_lookup):
     """
     Computes direct, second-to-last, and last replies for a single parent tweet.
     """
@@ -290,14 +286,15 @@ def get_comment_levels(parent_id, reply_lookup):
 
     second_to_last_replies = []
     for last_reply in last_replies:
-        row = comments[comments[id_col] == last_reply]
+        row = comments[comments[EXT_ID] == last_reply]
         previous_row = row.iloc[0][in_reply_to]
-        if previous_row != parent_id and previous_row not in last_replies \
-            and previous_row not in second_to_last_replies and previous_row not in direct_replies:
+        if previous_row != parent_id and previous_row not in direct_replies \
+            and previous_row not in last_replies:
             second_to_last_replies.append(previous_row)
+    second_to_last_replies = set(second_to_last_replies)
 
-    comments.loc[comments[id_col].isin(last_replies), "nth_comment"] = "n"
-    comments.loc[comments[id_col].isin(second_to_last_replies), "nth_comment"] = "n-1"
+    comments.loc[comments[EXT_ID].isin(last_replies), "nth_comment"] = "n"
+    comments.loc[comments[EXT_ID].isin(second_to_last_replies), "nth_comment"] = "n-1"
 
     # return {
     #     "original_id": parent_id,
@@ -307,31 +304,32 @@ def get_comment_levels(parent_id, reply_lookup):
     # }
 
 
-def all_comment_levels():
+def all_comment_levels(posts, comments):
     """
     Reads input files, constructs the reply tree, and computes comment levels for all parent tweets.
     """
     reply_lookup = defaultdict(list)
     for _, row in comments.iterrows():
-        reply_lookup[row[in_reply_to]].append(row[id_col])
+        reply_lookup[row[in_reply_to]].append(row[EXT_ID])
 
     for _, row in posts.iterrows():
-        if row["num_comments"] < 1: continue
-        parent_id = row[parent_id_col]
-        get_comment_levels(parent_id=parent_id, reply_lookup=reply_lookup)
+        parent_id = row[EXT_ID]
+        if parent_id not in reply_lookup: continue
+        get_comment_levels(comments, parent_id=parent_id, reply_lookup=reply_lookup)
 
     comments.to_csv(HOME + "new_truths_with_n.csv", index=False)
 
 if __name__ == "__main__":
     # truths_df = clean_data(truths_df)
-    truths_df = pd.read_excel(TRUTHS, sheet_name="popularity_cutoff").sample(frac=1, random_state=42).reset_index(drop=True)
-    print(len(truths_df), "truths loaded.")
-    argument_mine(truths_df)
+    # truths_df = pd.read_excel(TRUTHS, sheet_name="cleaned_truths").sample(frac=1, random_state=42).reset_index(drop=True)
+    # print(len(truths_df), "truths loaded.")
+    # print(popularity_range(truths_df))
+    # argument_mine(truths_df)
 
-    # all_comment_levels()
-    # posts = pd.read_excel(HOME + "ANALYSIS.xlsx")
-    # comments = pd.read_excel(HOME + "new_truths.xlsx")
+    posts = pd.read_excel(HOME + "ARGUMENTS.xlsx")
+    comments = pd.read_excel(HOME + "new_truths.xlsx")
+    # all_comment_levels(posts, comments)
     # parent_id_col = "external_id"
     # in_reply_to = "in_reply_to_id"
     # id_col = "id"
-    # stance_detect(posts)
+    stance_detect(posts, comments)
