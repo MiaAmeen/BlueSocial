@@ -73,7 +73,9 @@ def compile_thread(seed=None):
         writer.writeheader()
         f.flush()
 
+  print("Loading dataset...")
   truths_df = pd.read_excel(DATASET).sample(frac=1, random_state=42).reset_index(drop=True)
+  print("Dataset loaded.")
   truths_df = truths_df[truths_df[REPLIES] >= 3]
   if seed is not None: 
     truths_df = truths_df[truths_df.index % 5 == seed]
