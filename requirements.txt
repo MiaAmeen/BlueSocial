@@ -5,3 +5,4 @@ google
 google-genai
 dotenv
 curl_cffi
+loguru

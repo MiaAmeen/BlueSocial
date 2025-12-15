@@ -9,7 +9,8 @@ COLUMNS: 'url', 'external_id', 'timestamp', 'author_username', 'associated_tags'
       'reply_count', 'retruth_count', 'is_quote', 'is_retruth', 'is_reply',
       'replying_to', 'status', 'Keyword', 'Scraping Date'
 '''
-HOME = "./data/"
+HOME="./data/"
+HOME = "/share/csc591007f25/fameen/BlueSocial/data/"
 DATASET = HOME + "truthsocial2024.xlsx"
 SCRAPE_LOG = HOME + "scrape_log.csv"
 NEW_TRUTHS = HOME + "new_truths.csv"
