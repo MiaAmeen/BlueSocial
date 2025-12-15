@@ -119,6 +119,7 @@ class Api:
 
         except Exception as e:
             logger.error(f"Session error: {e}")
+            pass
 
         # Will also sleep
         self._check_ratelimit(resp)
@@ -161,7 +162,7 @@ class Api:
                 if len(parts) == 2 and parts[1].strip() == 'rel="next"':
                     next_link = parts[0].strip("<>")
                     break
-            logger.info(f"Next: {next_link}, resp: {resp}, headers: {resp.headers}")
+            # logger.info(f"Next: {next_link}, resp: {resp}, headers: {resp.headers}")
             yield resp.json()
 
             # Will also sleep

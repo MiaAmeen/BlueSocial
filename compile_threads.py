@@ -83,7 +83,7 @@ def compile_thread(seed=None):
   scrape_log = pd.read_csv(SCRAPE_LOG)
   SCRAPED = set(scrape_log.loc[scrape_log["scraped"] == 1, "row"])
 
-  print("Row, Success, Output")
+  # print("Row, Success, Output")
   for _, row in truths_df.iterrows():
     row_id = row["row"]
     if row_id in SCRAPED: continue
@@ -93,11 +93,11 @@ def compile_thread(seed=None):
     except Exception as e:
       success, output = 0, e
     
-    print(f"{row_id},{success},{output}")
+    # print(f"{row_id},{success},{output}")
 
-    # mask = scrape_log["row"] == row_id
-    # scrape_log.loc[mask, ["scraped", "output"]] = [success, output]
-    # scrape_log.to_csv(f"scrape_log-{seed}.csv", index=False)
+    mask = scrape_log["row"] == row_id
+    scrape_log.loc[mask, ["scraped", "output"]] = [success, output]
+    scrape_log.to_csv(f"scrape_log-{seed}.csv", index=False)
     SCRAPED.add(row_id)
 
 
