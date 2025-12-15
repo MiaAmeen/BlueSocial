@@ -3,7 +3,5 @@ pandas
 textblob
 google
 google-genai
-detoxify
-pandas
 dotenv
 curl_cffi

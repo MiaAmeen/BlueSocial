@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from dotenv import load_dotenv
-from random import random, expovariate
+from random import expovariate
 
 load_dotenv()
 
