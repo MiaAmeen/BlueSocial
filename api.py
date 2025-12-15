@@ -47,6 +47,7 @@ class Api:
         username=TRUTHSOCIAL_USERNAME,
         password=TRUTHSOCIAL_PASSWORD,
         token=TRUTHSOCIAL_TOKEN,
+        silent=False
     ):
         self.ratelimit_max = 300
         self.ratelimit_remaining = None
@@ -56,6 +57,11 @@ class Api:
         self.auth_id = token
         self.sesh = requests.Session(impersonate="chrome")
         self.last_call_time = time() - 1
+        self.silent = silent
+
+        if silent:
+            logging.disable(logging.CRITICAL)
+            logger.remove()
 
     def __check_login(self):
         """Runs before any login-walled function to check for login credentials and generates an auth ID token"""
