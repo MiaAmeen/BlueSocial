@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 from api import Api as truthbrush
 import os
@@ -23,7 +22,7 @@ REPLIES = "reply_count"
 LIKES = "like_count"
 
 # New Truth/Author Files
-TRUTH_FIELDS = ['created_at', 'edited_at', 'language', 'id', 'in_reply_to_id', 'in_reply_to_account_id', 'url', 'replies_count', 'favourites_count', 'text', 'sensitive', 'quote_id', 'reblog', 'mentions', 'tags', 'emojis', 'card', 'media_attachments', 'PARENT_ID'
+TRUTH_FIELDS = ['created_at', 'edited_at', 'language', 'id', 'in_reply_to_id', 'in_reply_to_account_id', 'url', 'replies_count', 'favourites_count', 'text', 'sensitive', 'quote_id', 'mentions', 'tags', 'emojis', 'card', 'media_attachments', 'PARENT_ID'
 ]
 AUTHOR_FIELDS = [ "username", "followers_count", "following_count", 
   "created_at", "url", "id", "note", "bot", "verified"
