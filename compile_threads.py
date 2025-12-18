@@ -1,3 +1,4 @@
+import glob
 import pandas as pd
 from api import Api as truthbrush
 import os
@@ -83,8 +84,8 @@ def compile_thread(seed=0, min_replies=3):
   # Load scrape log
   scrape_log = pd.read_csv(SCRAPE_LOG)
   SCRAPED = set(scrape_log.loc[scrape_log["scraped"] == 1, "row"])
+  print(f"Scraped so far: {len(SCRAPED)} truths.")
 
-  print(f"Using account: {API.__username}. Scraped so far: {len(SCRAPED)} truths.")
   print("Row, Success, Output")
   for _, row in truths_df.iterrows():
     row_id = row["row"]
@@ -103,6 +104,42 @@ def compile_thread(seed=0, min_replies=3):
     SCRAPED.add(row_id)
 
 
+def combine_threads():
+  def concat_files(pattern, output_name):
+    files = sorted(glob.glob(os.path.join(HOME, pattern)))
+
+    dfs = []
+    print(f"\nConcatenating {pattern}")
+    for f in files:
+      df = pd.read_csv(f)
+      print(f"  {os.path.basename(f)} → {len(df)} rows")
+      dfs.append(df)
+
+    combined = pd.concat(dfs, ignore_index=True)
+    print(f"TOTAL rows after concat: {len(combined)}")
+
+    combined.to_csv(f"{HOME}{output_name}", index=False)
+
+  concat_files("new_authors-*.csv", "new_authors-all.csv")
+  concat_files("new_truths-*.csv", "new_truths-all.csv")
+
+
+def merge_scrape_logs():
+  files = sorted(glob.glob(os.path.join(HOME, "scrape_log-*.csv")))
+
+  merged = None
+  for f in files:
+    df = pd.read_csv(f)
+    if merged is None:
+      merged = df
+    else:
+      merged["scraped"] = merged["scraped"].combine_first(df["scraped"])
+      merged["output"] = merged["output"].combine_first(df["output"])
+
+  merged.to_csv(f"{HOME}scrape_log.csv", index=False)
+  return merged
+
+
 def main():
   global API
 
@@ -118,7 +155,8 @@ def main():
   usr, pw = usernames[args.seed], passwords[args.seed]
   try:
     API = truthbrush(username=usr, password=pw, silent=False)
-    API.get_auth_id(usr, pw)
+    token = API.get_auth_id(usr, pw)
+    print(f"Authenticated as {usr} with {pw}: {token}")
   except Exception as _:
     quit(1)
 
@@ -126,4 +164,7 @@ def main():
 
 
 if __name__ == "__main__":
+  # combine_threads()
+  # merge_scrape_logs()
+
   main()
