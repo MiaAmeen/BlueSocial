@@ -195,7 +195,7 @@ class Api:
                     if not include_all and n_output >= top_num: return # break early
 
     def get_auth_id(self, username: str, password: str) -> str:
-        """Logs in to Truth account and returns the session token"""
+        """Logs in to Truth account and returns the session token"""    
         url = BASE_URL + "/oauth/token"
         try:
             payload = {
@@ -218,10 +218,15 @@ class Api:
                     "User-Agent": USER_AGENT,
                 },
             )
+
+            logger.info(f"Status: {sess_req.status_code}")
+            logger.info(f"Headers: {sess_req.headers}")
+            logger.info(f"Body: {sess_req.text}")
+
             sess_req.raise_for_status()
         except requests.RequestsError as e:
             logger.error(f"Failed login request: {str(e)}")
-            raise LoginErrorException('Cannot authenticate to .')
+            raise LoginErrorException(f'Cannot authenticate to {username}.')
 
         if not sess_req.json()["access_token"]:
             raise ValueError("Invalid truthsocial.com credentials provided!")

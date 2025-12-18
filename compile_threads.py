@@ -33,7 +33,6 @@ AUTHOR_FIELDS = [ "username", "followers_count", "following_count",
 usernames = os.getenv("TRUTHSOCIAL_USERNAMES", "").split(",")
 passwords = os.getenv("TRUTHSOCIAL_PASSWORDS", "").split(",")
 
-
 def get_comments(post_url, new_truths=NEW_TRUTHS, new_authors=NEW_AUTHORS):
   '''
   Fetch comments from Truth Social using truthbrush.
@@ -62,7 +61,6 @@ def meets_inclusion_criteria(row):
 
 
 def compile_thread(seed=0, min_replies=3):
-  global API
   new_truths = HOME + f"new_truths-{seed}.csv"
   new_authors = HOME + f"new_authors-{seed}.csv"
 
@@ -79,18 +77,14 @@ def compile_thread(seed=0, min_replies=3):
   print("Dataset loaded.")
   truths_df = truths_df[truths_df[REPLIES] >= min_replies]
 
-  # Shard dataset by seed
+  # # Shard dataset by seed
   truths_df = truths_df[truths_df.index % 5 == seed]
-  usr, pw = usernames[seed], passwords[seed]
-
-  # Initialize API
-  API = truthbrush(username=usr, password=pw, silent=False)
 
   # Load scrape log
   scrape_log = pd.read_csv(SCRAPE_LOG)
   SCRAPED = set(scrape_log.loc[scrape_log["scraped"] == 1, "row"])
 
-  print(f"Using account: {usr}. Scraped so far: {len(SCRAPED)} truths.")
+  print(f"Using account: {API.__username}. Scraped so far: {len(SCRAPED)} truths.")
   print("Row, Success, Output")
   for _, row in truths_df.iterrows():
     row_id = row["row"]
@@ -110,6 +104,8 @@ def compile_thread(seed=0, min_replies=3):
 
 
 def main():
+  global API
+
   import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument(
@@ -118,6 +114,13 @@ def main():
     default=0
   )
   args = parser.parse_args()
+
+  usr, pw = usernames[args.seed], passwords[args.seed]
+  try:
+    API = truthbrush(username=usr, password=pw, silent=False)
+    API.get_auth_id(usr, pw)
+  except Exception as _:
+    quit(1)
 
   compile_thread(args.seed)
 
