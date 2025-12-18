@@ -10,7 +10,7 @@ COLUMNS: 'url', 'external_id', 'timestamp', 'author_username', 'associated_tags'
       'replying_to', 'status', 'Keyword', 'Scraping Date'
 '''
 HOME="./data/"
-HOME = "/share/csc591007f25/fameen/BlueSocial/data/"
+# HOME = "/share/csc591007f25/fameen/BlueSocial/data/"
 DATASET = HOME + "truthsocial2024.xlsx"
 SCRAPE_LOG = HOME + "scrape_log.csv"
 NEW_TRUTHS = HOME + "new_truths.csv"
@@ -32,7 +32,7 @@ AUTHOR_FIELDS = [ "username", "followers_count", "following_count",
 # Set up Truth Social API client
 usernames = os.getenv("TRUTHSOCIAL_USERNAMES", "").split(",")
 passwords = os.getenv("TRUTHSOCIAL_PASSWORDS", "").split(",")
-API = truthbrush(usernames[0], passwords[0])  # Default to first account
+
 
 def get_comments(post_url, new_truths=NEW_TRUTHS, new_authors=NEW_AUTHORS):
   '''
@@ -61,7 +61,7 @@ def meets_inclusion_criteria(row):
   return (row[REPLIES] >= 3)
 
 
-def compile_thread(seed=None):
+def compile_thread(seed=0, min_replies=3):
   global API
   new_truths = HOME + f"new_truths-{seed}.csv"
   new_authors = HOME + f"new_authors-{seed}.csv"
@@ -73,19 +73,25 @@ def compile_thread(seed=None):
         writer.writeheader()
         f.flush()
 
+  # Load and filter dataset
   print("Loading dataset...")
   truths_df = pd.read_excel(DATASET).sample(frac=1, random_state=42).reset_index(drop=True)
   print("Dataset loaded.")
-  truths_df = truths_df[truths_df[REPLIES] >= 3]
-  if seed is not None: 
-    truths_df = truths_df[truths_df.index % 5 == seed]
-    usr, pw = usernames[seed], passwords[seed]
-    API = truthbrush(username=usr, password=pw, silent=True)
+  truths_df = truths_df[truths_df[REPLIES] >= min_replies]
 
+  # Shard dataset by seed
+  truths_df = truths_df[truths_df.index % 5 == seed]
+  usr, pw = usernames[seed], passwords[seed]
+
+  # Initialize API
+  API = truthbrush(username=usr, password=pw, silent=False)
+
+  # Load scrape log
   scrape_log = pd.read_csv(SCRAPE_LOG)
   SCRAPED = set(scrape_log.loc[scrape_log["scraped"] == 1, "row"])
 
-  # print("Row, Success, Output")
+  print(f"Using account: {usr}. Scraped so far: {len(SCRAPED)} truths.")
+  print("Row, Success, Output")
   for _, row in truths_df.iterrows():
     row_id = row["row"]
     if row_id in SCRAPED: continue
@@ -95,7 +101,7 @@ def compile_thread(seed=None):
     except Exception as e:
       success, output = 0, e
     
-    # print(f"{row_id},{success},{output}")
+    print(f"{row_id},{success},{output}")
 
     mask = scrape_log["row"] == row_id
     scrape_log.loc[mask, ["scraped", "output"]] = [success, output]
