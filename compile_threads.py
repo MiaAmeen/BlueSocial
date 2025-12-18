@@ -105,7 +105,7 @@ def compile_thread(seed=0, min_replies=3):
 
     mask = scrape_log["row"] == row_id
     scrape_log.loc[mask, ["scraped", "output"]] = [success, output]
-    scrape_log.to_csv(f"scrape_log-{seed}.csv", index=False)
+    scrape_log.to_csv(f"{HOME}scrape_log-{seed}.csv", index=False)
     SCRAPED.add(row_id)
 
 
