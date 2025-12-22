@@ -83,8 +83,8 @@ def compile_thread(seed=0, min_replies=3):
 
   # Load scrape log
   scrape_log = pd.read_csv(SCRAPE_LOG)
-  SCRAPED = set(scrape_log.loc[scrape_log["scraped"] == 1, "row"])
-  print(f"Scraped so far: {len(SCRAPED)} truths.")
+  SCRAPED = set(scrape_log.loc[scrape_log["scraped"].isin([0, 1]), "row"])
+  print(f"Processed so far: {len(SCRAPED)} truths.")
 
   print("Row, Success, Output")
   for _, row in truths_df.iterrows():
