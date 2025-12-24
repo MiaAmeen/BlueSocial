@@ -1,9 +1,11 @@
+import ast
+from detoxify import Detoxify
 import numpy as np
 import pandas as pd
-import os
 from collections import defaultdict
 from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
+import re
 
 from nltk.sentiment import SentimentIntensityAnalyzer
 import nltk
@@ -13,11 +15,10 @@ import seaborn as sns
 
 
 # LOAD THE DATA
-HOME = "/Users/destroyerofworlds/Desktop/NLP/PROJECT/BlueSocial/"
-input_file = HOME + "ANALYSIS.xlsx"
+HOME = "/Users/destroyerofworlds/Desktop/NLP/PROJECT/BlueSocial/data/"
 
 # Column names
-TEXT = "text"
+TEXT = "content"
 TOXICITY = "toxicity"
 SENTIMENT = "sentiment"
 LLM_OUTPUT = "AM_output"
@@ -28,7 +29,78 @@ COMMENTS = "num_comments"
 USER = "profile_url"
 URL = "url"
 ID = "external_id"
+POPULARITY = "uh not here yet"
+HASHTAGS = "associated_tags"
+
+
+def clean_data(df):
+  '''
+  Clean the input dataframe.
+  '''
+  df = df.drop_duplicates(subset=[TEXT, URL])
+  df = df.dropna(subset=[TEXT, URL])
+  df.to_excel(HOME + "cleaned_truths.xlsx", index=False)
+
+  return df
+
+
+def tag_data(df):
+  nltk.download('vader_lexicon')
+  sia = SentimentIntensityAnalyzer()
+
+  def get_toxicity(text):
+    if pd.isna(text): return None
+    # print(text)
+    return Detoxify('original').predict(str(text))['toxicity']
   
+  def vader_sentiment(text):
+    if pd.isna(text): return None
+    # print(text)
+    return sia.polarity_scores(text)['compound']
+
+  df[SENTIMENT] = df[TEXT].apply(vader_sentiment)
+  df[TOXICITY] = df[TEXT].apply(get_toxicity)
+  return df
+
+
+def popularity_range(df):
+  vals = df[df[POPULARITY] >= 0][POPULARITY]
+  Q1 = vals.quantile(0.25)
+  Q3 = vals.quantile(0.75)
+  IQR = Q3 - Q1
+
+  # Outlier thresholds
+  # lower_bound = Q1 - 1.5 * IQR
+  upper_bound = Q3 + 1.5 * IQR
+
+  # print("Q1 (25%):", Q1)
+  # print("Q3 (75%):", Q3)
+  # print("Lower bound:", lower_bound)
+  # print("Upper bound:", upper_bound)
+  return upper_bound
+
+
+def has_meaningful_text(row):
+  text = row[TEXT]
+  tags = row[HASHTAGS]
+  if not text or not isinstance(text, str): return False
+
+  try:
+    tags = ast.literal_eval(tags) if isinstance(tags, str) else tags
+  except Exception:
+    tags = []
+
+  for tag in tags:
+    text = re.sub("#" + re.escape(tag), "", text, flags=re.IGNORECASE)
+
+  text = re.sub(r"<emoji:\s*[^>]+>", "", text)
+  text = re.sub(r"http\S+|www\.\S+", "", text)
+  text = re.sub(r"\d+", "", text)
+  text = re.sub(r"\s+", " ", text).strip()
+  
+  return text != ""
+  # return text
+
 
 def word_clouds(df):
   from wordcloud import WordCloud
@@ -286,14 +358,8 @@ def bar_graph():
 
 
 def main():
-  # df = pd.read_excel(input_file)
-  # print(len(df), "rows loaded.")
-  # df = pd.read_excel("/Users/destroyerofworlds/Desktop/NLP/PROJECT/BlueSocial/ARGUMENTS.xlsx")
-  # df = df.drop_duplicates(subset = ["text", "profile_url"])
-  # df = df[df["AM_label"] == 1]
-  # word_clouds(df)
-  # regression_features()
-  # sankey()
-  bar_graph()
+  df = pd.read_excel(HOME + "TS24-min_replies_content.xlsx")
 
-main()
+  
+if __name__ == "__main__":
+  main()

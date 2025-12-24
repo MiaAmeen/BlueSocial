@@ -12,7 +12,7 @@ COLUMNS: 'url', 'external_id', 'timestamp', 'author_username', 'associated_tags'
 '''
 HOME="./data/"
 # HOME = "/share/csc591007f25/fameen/BlueSocial/data/"
-DATASET = HOME + "truthsocial2024.xlsx"
+DATASET = HOME + "TS24-clean.xlsx"
 SCRAPE_LOG = HOME + "scrape_log.csv"
 NEW_TRUTHS = HOME + "new_truths.csv"
 NEW_AUTHORS = HOME + "new_authors.csv"
@@ -76,7 +76,6 @@ def compile_thread(seed=0, min_replies=3):
   print("Loading dataset...")
   truths_df = pd.read_excel(DATASET).sample(frac=1, random_state=42).reset_index(drop=True)
   print("Dataset loaded.")
-  truths_df = truths_df[truths_df[REPLIES] >= min_replies]
 
   # # Shard dataset by seed
   truths_df = truths_df[truths_df.index % 5 == seed]

@@ -1,7 +1,5 @@
-import numpy as np
 import pandas as pd
 import pandas as pd
-from detoxify import Detoxify
 from google import genai
 from google.genai import types
 import os
@@ -10,18 +8,15 @@ from collections import defaultdict
 import regex as re
 import json
 
-from nltk.sentiment import SentimentIntensityAnalyzer
-import nltk
-
 # LOAD THE DATA
-HOME = "/Users/destroyerofworlds/Desktop/NLP/PROJECT/BlueSocial/"
+HOME = "/Users/destroyerofworlds/Desktop/NLP/PROJECT/BlueSocial/data/"
 TRUTHS = HOME + "truth_social/truths_cleaned_tagged.xlsx"
 COMMENTS = HOME + "new_truths.xlsx"
 
 # Column names
 POPULARITY = "follow_ratio"
 PROFILE = "profile_url"
-TEXT = "text"
+TEXT = "content"
 EXT_ID = "external_id"
 SENTIMENT = "sentiment"
 REPLIES = "reply_count"
@@ -48,13 +43,21 @@ You may find advertisements in tweets promoting a user's content. Even though th
 Here are some examples:
 
 Tweets: [
-[id: 1, text: "I think cannabis should be legalized because it has real medical benefits!"],
-[id: 2, text: "I love donald trump"],
+[id: 1, text: ".<emoji: rotating_light>Follow #RealDonaldTrump #Trump2024 #WeThePeople are calling for dropping all charges against #Trump NOW! President Trump is innocent and suffered too much. We saw EVIL. Evildoers are DemonCRATS (AGs and Kangaroo judges) FakeNews and more, they are crooked, totally compromised.   We must Defeat #CrookedBiden. America is DAMAGED! #BidenTrial #Bidenflation #Bidenomics #BidenBorderCrisis   #Trump2024TheOnlyChoice  #Trump2024toSaveAmerica SAVE AMERICA<emoji: us>SAVE OUR WORLD<emoji: earth_americas><emoji: earth_africa><emoji: earth_asia> GOD BLESS DJT<emoji: latin_cross>GOD BLESS AMERICA<emoji: latin_cross>  #A06114  #T4MAGAt  ~ @WenMaMa2"],
+[id: 2, text: "If President Trump IS convicted of any of the 91 indictments in the 4 trials brought by corrupt DA's...Obama's killing American citizens overseas, O'Biden's Immigrant Invasion and rampant crime and Bush's needless Wars in Iraq and Afghanistan are fair game!  These fuckers don't realize the "Pandora's Box" they've opened!  We will prosecute them just as we used the #NukeOption after Hairless Reid authored it, the #MeToo when they went after xxx and Justice Kavanaugh and the #Ukraine Quid Pro Quo Joey bragged about on video, they set the precedent!  None of them will be 'immune!'  #NukeOption  #MeToo  #Ukraine"],
+[id: 3, text: "There's not a study of those who got one, two, or three jabs because a lot of them have already taken a Dirt Nap‚..  Officially known as "Death from unknown causes"   Isn't it weird Congress and Senators didn't have to get the Jab and none of them died from Unknown Causes?"],
+[id: 4, text: "In the fall of 2020, researchers at the Univ of Pittsburgh published a study titled, ‚ÄúDevelopment of humanized mouse and rat models with full-thickness human skin and autologous immune cells.‚Äù In studying how organs reacted to pathogens or infections on human skin, researchers grafted ‚Äúfull-thickness human skin‚Äù a/w/a thymuses, livers, and spleens from fetuses onto rodent bodies, creating what they call ‚Äúhumanized rat models.‚Äù  Humanized rats. Remains of unborn babies, purchased from Planned Parenthood and the like, had their scalps removed and subsequently attached to the heads of lab rats. As head of the NIH, not only did Collins approve this study and thus validate its objectives, but also provided taxpayer funds to pay for it.   One yr later, thanks to the work of pro-life undercover journalists, U of P admitted to removing the kidneys from born-alive babies while their hearts were still beating."],
+[id: 5, text: "Hi! I‚Äôm not sure how to really use Truth. This is my husbands account. But we are need of assistance badly. My husband is a 100 percent disabled combat vet from the Iraq war. He suffers from severe PTSD. We have been having really bad financial issues over the last few months and things have only gotten worse. Recently because of all the stress and him having PTSD he tried to unalive him self. He is ok now and recovering in the hospital. If anyone can please help whether it‚Äôs sharing, donating or even just praying for our family. We do have children. Everything is in the description and updates on the go fund me. Please we are desperate. Thank you to anyone and everyone who can help in any way. #Trump2024 #USMC #VETERANS #GoFundMe #patriots #disabledveterans  https://links.truthsocial.com/link/112716168326232757"],
+[id: 6, text: "Woman Horrified by What Happened After Building Owners Unfurl Biden-Harris Banner Right Above Her Store      #Donaldtrump #FJB #JoeBiden #News #Trump2024      https://links.truthsocial.com/link/112824968393584003"],
 ]
 
 Output: [
-[id: 1, annotation: The response is argumentative and employing logos because it contains a claim and premise, and the premise is a fact.],
-[id: 2, annotation: The response is not argumentative because it does not contain a claim or premise.],
+[id: 1, annotation: The response is argumentative and employing Ethos, Pathos because: it advances the claim that charges should be dropped and that “President Trump is innocent,” and supports that claim with emotional appeals (e.g., “SAVE AMERICA,” “suffered too much,” “GOD BLESS”) and attacks on opponents’ character/credibility (e.g., “Evildoers…DemonCRATS,” “crooked, totally compromised”), which function as premises.],
+[id: 2, annotation: The response is argumentative and employing Logos because: it makes a conditional claim about prosecuting political opponents if Trump is convicted and supports it by citing precedents and examples (“we used the #NukeOption…#MeToo…Ukraine Quid Pro Quo”) (logos).],
+[id: 3, annotation: The response is argumentative and employing Logos because: it asserts the claim that vaccine recipients have died (“a lot of them have already taken a Dirt Nap…Death from unknown causes”) which is presented as factual evidence (logos).],
+[id: 4, annotation: The response is argumentative and employing Logos, Pathos because: it claims NIH/U. of Pittsburgh funded and carried out grotesque fetal-tissue experiments and supports this with citation of a specific published study and later investigative claims (logos), while using graphic, emotional descriptions (scalps removed, born-alive babies) to persuade (pathos).],
+[id: 5, annotation: The response is not argumentative because: it is a personal plea for assistance without any claim or premise.],
+[id: 6, annotation: The response is not argumentative because: it reads like a linked headline/summary reporting someone’s reaction without any claim or premise.],
 ]
 """
 
@@ -102,78 +105,21 @@ Tweets: [
 """
 
 client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'), project=os.getenv('GEMINI_PROJECT_ID'))
-PEAK_REQ_PER_MIN = 10
+PEAK_REQ_PER_MIN = 150
 
 def generate_content(input, SYSTEM_PROMPT=AM_SYSTEM_PROMPT):
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-2.5-pro",
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT),
         contents=input
     )
     return response.text
 
-def clean_data(df):
-    nltk.download('vader_lexicon')
-    sia = SentimentIntensityAnalyzer()
-
-    def get_toxicity(text):
-        if pd.isna(text): return None
-        # print(text)
-        return Detoxify('original').predict(str(text))['toxicity']
-    
-    def vader_sentiment(text):
-        if pd.isna(text): return None
-        # print(text)
-        return sia.polarity_scores(text)['compound']
-
-    df = df.drop_duplicates(subset=[PROFILE, TEXT]).copy()
-    filtered_df = df[df[REPLIES] >= 1]
-    filtered_df[SENTIMENT] = filtered_df[TEXT].apply(vader_sentiment)
-
-    print(f"Number of posts: {len(filtered_df)}")
-    print(f"Unique users: {filtered_df[PROFILE].nunique()}")
-
-    # --- 4. Save cleaned data ---
-    output_path = HOME + "truths_cleaned_tagged.xlsx"
-    filtered_df.to_excel(output_path, index=False)
-    print(f"✅ Cleaned data saved to: {output_path}")
-
-    return filtered_df
-
-def popularity_range(df):
-    vals = df[df[POPULARITY] >= 0][POPULARITY]
-    Q1 = vals.quantile(0.25)
-    Q3 = vals.quantile(0.75)
-    IQR = Q3 - Q1
-
-    # Outlier thresholds
-    # lower_bound = Q1 - 1.5 * IQR
-    upper_bound = Q3 + 1.5 * IQR
-
-    # print("Q1 (25%):", Q1)
-    # print("Q3 (75%):", Q3)
-    # print("Lower bound:", lower_bound)
-    # print("Upper bound:", upper_bound)
-
-    return upper_bound
-
-def has_meaningful_text(text):
-    if not text or not isinstance(text, str):
-        return False
-
-    text_clean = re.sub(r"http\S+|www\.\S+", "", text) # Remove URLs    
-    text_clean = re.sub(r"<emoji:\s*[^>]+>", "", text_clean)
-    text_clean = re.sub(r"[^\w\s]", "", text_clean) # Remove emojis and non-word symbols
-    text_clean = re.sub(r"\d+", "", text_clean) # Remove numbers
-    text_clean = text_clean.strip() # Strip whitespace
-    
-    return bool(re.search(r"[A-Za-z]", text_clean)) # Check if any alphabetic characters remain
-
 def meets_inclusion_criteria(row):
-#   return has_meaningful_text(row["text"]) and row["reply_count"] >= 5 and \
-#   (row["AM_label"] == "" or pd.isna(row["AM_label"])) and (row["AM_output"] == "" or pd.isna(row["AM_output"]))
-    return row["AM_label"] == 1
+  return row["comments_scraped"] >= 3 and \
+  (row["AM_label"] == "" or pd.isna(row["AM_label"])) and (row["AM_output"] == "" or pd.isna(row["AM_output"]))
+    # return row["AM_label"] == 1
 
 def argument_mine(df):
 
@@ -201,9 +147,9 @@ def argument_mine(df):
         input_indices = {}
         for idx in batch_idxs:
             row = df.loc[idx]
-            ext_id = int(row['external_id'])
+            ext_id = int(row[EXT_ID])
             input_indices[idx] = ext_id
-            input_str += f"[id: {ext_id}, text: \"{row['text'].replace('"', "'")}\"]\n"
+            input_str += f"[id: {ext_id}, text: \"{row[TEXT].replace('"', "'")}\"]\n"
 
         try:
             if last_api_call:
@@ -320,16 +266,5 @@ def all_comment_levels(posts, comments):
     comments.to_csv(HOME + "new_truths_with_n.csv", index=False)
 
 if __name__ == "__main__":
-    # truths_df = clean_data(truths_df)
-    # truths_df = pd.read_excel(TRUTHS, sheet_name="cleaned_truths").sample(frac=1, random_state=42).reset_index(drop=True)
-    # print(len(truths_df), "truths loaded.")
-    # print(popularity_range(truths_df))
-    # argument_mine(truths_df)
-
-    posts = pd.read_excel(HOME + "ARGUMENTS.xlsx")
-    comments = pd.read_excel(HOME + "new_truths.xlsx")
-    # all_comment_levels(posts, comments)
-    # parent_id_col = "external_id"
-    # in_reply_to = "in_reply_to_id"
-    # id_col = "id"
-    stance_detect(posts, comments)
+    posts = pd.read_excel(HOME + "TS24_min-replies-content.xlsx")
+    argument_mine(posts)
