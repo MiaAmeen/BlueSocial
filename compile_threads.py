@@ -11,7 +11,6 @@ COLUMNS: 'url', 'external_id', 'timestamp', 'author_username', 'associated_tags'
       'replying_to', 'status', 'Keyword', 'Scraping Date'
 '''
 HOME="./data/"
-# HOME = "/share/csc591007f25/fameen/BlueSocial/data/"
 DATASET = HOME + "TS24-clean.xlsx"
 SCRAPE_LOG = HOME + "scrape_log.csv"
 NEW_TRUTHS = HOME + "new_truths.csv"
@@ -61,7 +60,7 @@ def meets_inclusion_criteria(row):
   return (row[REPLIES] >= 3)
 
 
-def compile_thread(seed=0, min_replies=3):
+def compile_thread(seed=0):
   new_truths = HOME + f"new_truths-{seed}.csv"
   new_authors = HOME + f"new_authors-{seed}.csv"
 
@@ -78,7 +77,7 @@ def compile_thread(seed=0, min_replies=3):
   print("Dataset loaded.")
 
   # # Shard dataset by seed
-  truths_df = truths_df[truths_df.index % 5 == seed]
+  truths_df = truths_df[truths_df.index % 10 == seed]
 
   # Load scrape log
   scrape_log = pd.read_csv(SCRAPE_LOG)
@@ -117,10 +116,16 @@ def combine_threads():
     combined = pd.concat(dfs, ignore_index=True)
     print(f"TOTAL rows after concat: {len(combined)}")
 
+    dup = combined.duplicated(subset=[URL]).sum()
+    print(f"Duplicate rows: {dup}")
+
+    combined = combined.drop_duplicates(subset=[URL], ignore_index=True)
+    print(f"TOTAL rows after deduplication: {len(combined)}")
+
     combined.to_csv(f"{HOME}{output_name}", index=False)
 
-  concat_files("new_authors-*.csv", "new_authors-all.csv")
   concat_files("new_truths-*.csv", "new_truths-all.csv")
+  concat_files("new_authors-*.csv", "new_authors-all.csv")
 
 
 def merge_scrape_logs():
