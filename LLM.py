@@ -5,8 +5,9 @@ from google.genai import types
 import os
 from time import time, sleep
 from collections import defaultdict
-import regex as re
-import json
+# from dotenv import load_dotenv
+
+# load_dotenv()
 
 # LOAD THE DATA
 HOME = "./data/"
@@ -363,10 +364,18 @@ def all_comment_levels(posts, comments):
     comments.to_csv(HOME + "new_truths_with_n.csv", index=False)
 
 
+def main():
+    print("API key in use: ", os.getenv('GEMINI_API_KEY'))
+    print("Project ID in use: ", os.getenv('GEMINI_PROJECT_ID'))
+    
+    # posts = pd.read_excel(HOME + "TS24-clean.xlsx", sheet_name="TS24")
+    # argument_mine(posts)
+
+
 if __name__ == "__main__":
-    posts = pd.read_excel(HOME + "TS24-clean.xlsx", sheet_name="TS24")
+    main()
     # comments = pd.read_excel(HOME + "new_truths-all.xlsx", sheet_name="Sheet1")
-    argument_mine(posts)
+    
     # stance_detect(posts)
     # merge_outputs(posts, pd.read_csv(HOME + "gemini_argmine.csv"))
 
