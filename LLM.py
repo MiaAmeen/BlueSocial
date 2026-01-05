@@ -5,9 +5,9 @@ from google.genai import types
 import os
 from time import time, sleep
 from collections import defaultdict
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 
-# load_dotenv()
+load_dotenv()
 
 # LOAD THE DATA
 HOME = "./data/"
@@ -368,8 +368,8 @@ def main():
     print("API key in use: ", os.getenv('GEMINI_API_KEY'))
     print("Project ID in use: ", os.getenv('GEMINI_PROJECT_ID'))
     
-    # posts = pd.read_excel(HOME + "TS24-clean.xlsx", sheet_name="TS24")
-    # argument_mine(posts)
+    posts = pd.read_excel(HOME + "TS24-clean.xlsx", sheet_name="TS24")
+    argument_mine(posts)
 
 
 if __name__ == "__main__":
