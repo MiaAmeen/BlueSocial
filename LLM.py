@@ -261,7 +261,7 @@ def stance_detect(df):
             df.loc[idx, SD] = result
             print(f"{post_id}, {result}")
 
-        df[EXT_ID, SD].to_csv(HOME + "SD_output.csv", index=False)
+        df[[EXT_ID, SD]].to_csv(HOME + "SD_output.csv", index=False)
 
     df = df.sort_values(by=["reply_depth", PARENT_URL]).reset_index(drop=True)
     num_requests = 0
@@ -270,6 +270,7 @@ def stance_detect(df):
     eligible_indices = [idx for idx, row in df.iterrows() if _meets_inclusion_criteria(row)]
     batch_size = 25
 
+    print(f"Total eligible replies for stance detection: {len(eligible_indices)}")
     for start in range(0, len(eligible_indices), batch_size):
         batch_idxs = eligible_indices[start:start + batch_size]
 
