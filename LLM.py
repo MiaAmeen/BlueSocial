@@ -22,7 +22,9 @@ REPLIES = "reply_count"
 LIKES = "like_count"
 TOXICITY = "toxicity"
 AM = "AM_output"
+AM_label = "AM_label"
 SD = "SD_output"
+SD_label = "SD_label"
 IS_URL = "is_url"
 NG = "Sanity Check"
 in_reply_to = "in_reply_to_id"
@@ -175,7 +177,7 @@ def argument_mine(df):
             df.loc[idx, AM] = result
             print(f"{post_id}, {result}")
 
-        df.to_csv(HOME + "AM_output.csv", index=False)
+        df[[EXT_ID, AM]].to_csv(HOME + "AM_output.csv", index=False)
 
     num_requests = 0
     last_api_call = None
@@ -236,6 +238,11 @@ def merge_outputs(df_x, df_c):
 
 
 def stance_detect(df):
+    def _meets_inclusion_criteria(row):
+        return row["AM?"] == 1 and row["reply_depth"] != "ORPHAN" and \
+            (pd.isna(row[SD]) or row[SD] == "") and row[TEXT] != "" and not pd.isna(row[TEXT]) \
+            and row["PARENT_comments"] >= 3
+
     def extract_output(input_indices, output):
         id_positions = {}
         for post_id in set(input_indices.values()):
@@ -254,14 +261,14 @@ def stance_detect(df):
             df.loc[idx, SD] = result
             print(f"{post_id}, {result}")
 
-        df.to_csv(HOME + "validate-SD.csv", index=False)
+        df[EXT_ID, SD].to_csv(HOME + "SD_output.csv", index=False)
 
     df = df.sort_values(by=["reply_depth", PARENT_URL]).reset_index(drop=True)
     num_requests = 0
     last_api_call = None
 
-    eligible_indices = [idx for idx, row in df.iterrows() if meets_inclusion_criteria(row)]
-    batch_size = 20
+    eligible_indices = [idx for idx, row in df.iterrows() if _meets_inclusion_criteria(row)]
+    batch_size = 25
 
     for start in range(0, len(eligible_indices), batch_size):
         batch_idxs = eligible_indices[start:start + batch_size]
@@ -283,7 +290,7 @@ def stance_detect(df):
                 curr_text = parent_text
 
             input_indices[idx] = ext_id
-            reply_text = row[TEXT].replace('"', "'")
+            reply_text = str(row[TEXT]).replace('"', "'")
             input_str += f'[id: {ext_id}, text: "{reply_text}"],\n'
 
         input_str += "]]]"  # close last Replies + Tweet + outer block
@@ -368,8 +375,11 @@ def main():
     print("API key in use: ", os.getenv('GEMINI_API_KEY'))
     print("Project ID in use: ", os.getenv('GEMINI_PROJECT_ID'))
     
-    posts = pd.read_excel(HOME + "TS24-clean.xlsx", sheet_name="TS24")
-    argument_mine(posts)
+    # posts = pd.read_excel(HOME + "TS24-clean.xlsx", sheet_name="TS24", dtype={TEXT: str})
+    # argument_mine(posts)
+
+    comments = pd.read_excel(HOME + "new_truths-all-small.xlsx", sheet_name="Sheet2", dtype={TEXT: str})
+    stance_detect(comments)
 
 
 if __name__ == "__main__":
