@@ -155,12 +155,13 @@ def call_ollama(input, SYSTEM_PROMPT, MODEL=DS1):
     payload = {
         "model": MODEL,
         "prompt": input,
-        "system": SYSTEM_PROMPT
+        "system": SYSTEM_PROMPT,
+        "stream": False
     }
     response = requests.post(OLLAMA_URL, json=payload)
     response.raise_for_status()
 
-    print(response.json()["load_duration"])
+    # print(response.json()["load_duration"])
     return response.json()["response"]
 
 
@@ -322,9 +323,14 @@ def stance_detect(df):
                     sleep(60 - elapsed)
                     num_requests = 0
 
-            output = generate_content(
+            # output = generate_content(
+            #     STANCE_USER_PROMPT.format(input_str),
+            #     SYSTEM_PROMPT=STANCE_SYSTEM_PROMPT
+            # )
+            output = call_ollama(
                 STANCE_USER_PROMPT.format(input_str),
-                SYSTEM_PROMPT=STANCE_SYSTEM_PROMPT
+                SYSTEM_PROMPT=STANCE_SYSTEM_PROMPT,
+                MODEL=DS1
             )
 
             last_api_call = time()
@@ -397,11 +403,11 @@ def main():
     # posts = pd.read_excel(HOME + "TS24-clean.xlsx", sheet_name="AM", dtype={TEXT: str})
     # argument_mine(posts)
 
-    # comments = pd.read_excel(HOME + "new_truths-all.xlsx", sheet_name="Sheet1", dtype={TEXT: str})
-    # stance_detect(comments)
+    comments = pd.read_excel(HOME + "validate-AM-SD.xlsx", sheet_name="SD", dtype={TEXT: str})
+    stance_detect(comments)
 
-    prompt = "testing..."
-    print(call_ollama(prompt, SYSTEM_PROMPT="You are a helpful assistant."))
+    # prompt = "testing..."
+    # print(call_ollama(prompt, SYSTEM_PROMPT="You are a helpful assistant."))
 
 
 if __name__ == "__main__":
