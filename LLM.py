@@ -6,6 +6,7 @@ import os
 from time import time, sleep
 from collections import defaultdict
 from dotenv import load_dotenv
+import requests
 
 load_dotenv()
 
@@ -147,6 +148,22 @@ def generate_content(input, SYSTEM_PROMPT):
     return response.text
 
 
+OLLAMA_URL = "http://localhost:11434/api/generate"
+DS1 = "deepseek-r1:1.5b"
+DS2 = "deepseek-r1:7b"
+def call_ollama(input, SYSTEM_PROMPT, MODEL=DS1):
+    payload = {
+        "model": MODEL,
+        "prompt": input,
+        "system": SYSTEM_PROMPT
+    }
+    response = requests.post(OLLAMA_URL, json=payload)
+    response.raise_for_status()
+
+    print(response.json()["load_duration"])
+    return response.json()["response"]
+
+
 def meets_inclusion_criteria(row):
 #   return row["comments_scraped"] >= 3 and (row["AM_output"] == "" or pd.isna(row["AM_output"]))
 #   return row["AM_output"] == "" or pd.isna(row["AM_output"])
@@ -183,6 +200,7 @@ def argument_mine(df):
     last_api_call = None
 
     eligible_indices = [idx for idx, row in df.iterrows() if _meets_inclusion_criteria(row)]
+    print(f"Total eligible posts: {len(eligible_indices)}")
     batch_size = 20
     for start in range(0, len(eligible_indices), batch_size):
         batch_idxs = eligible_indices[start:start + batch_size]
@@ -193,7 +211,7 @@ def argument_mine(df):
             row = df.loc[idx]
             ext_id = int(row[EXT_ID])
             input_indices[idx] = ext_id
-            input_str += f"[id: {ext_id}, text: \"{row[TEXT].replace('"', "'")}\"],\n"
+            input_str += f"[id: {ext_id}, text: \"{str(row[TEXT]).replace('"', "'")}\"],\n"
 
         try:
             if last_api_call:
@@ -373,14 +391,17 @@ def all_comment_levels(posts, comments):
 
 
 def main():
-    print("API key in use: ", os.getenv('GEMINI_API_KEY'))
-    print("Project ID in use: ", os.getenv('GEMINI_PROJECT_ID'))
+    # print("API key in use: ", os.getenv('GEMINI_API_KEY'))
+    # print("Project ID in use: ", os.getenv('GEMINI_PROJECT_ID'))
     
-    # posts = pd.read_excel(HOME + "TS24-clean.xlsx", sheet_name="TS24", dtype={TEXT: str})
+    # posts = pd.read_excel(HOME + "TS24-clean.xlsx", sheet_name="AM", dtype={TEXT: str})
     # argument_mine(posts)
 
-    comments = pd.read_excel(HOME + "new_truths-all-small.xlsx", sheet_name="Sheet2", dtype={TEXT: str})
-    stance_detect(comments)
+    # comments = pd.read_excel(HOME + "new_truths-all.xlsx", sheet_name="Sheet1", dtype={TEXT: str})
+    # stance_detect(comments)
+
+    prompt = "testing..."
+    print(call_ollama(prompt, SYSTEM_PROMPT="You are a helpful assistant."))
 
 
 if __name__ == "__main__":
