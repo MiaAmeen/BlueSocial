@@ -1,5 +1,5 @@
 from time import sleep, time
-from typing import Any
+from typing import Any, Optional
 from loguru import logger
 from dateutil import parser as date_parse
 from datetime import datetime, timezone
@@ -194,6 +194,15 @@ class Api:
                     n_output += 1
                     if not include_all and n_output >= top_num: return # break early
 
+    def lookup(self, user_handle: str = None) -> Optional[dict]:
+        """Lookup a user's information:
+        {'id': '108529289152888216', 'username': 'MAGA__Patriot', 'acct': 'MAGA__Patriot', 'display_name': 'Trump Girl 🇺🇸🔥🇺🇸', 'locked': False, 'bot': False, 'discoverable': True, 'group': False, 'created_at': '2022-06-23T23:05:30.318Z', 'note': '<p>Find me on Twitter <span class="h-card"><a href="https://truthsocial.com/@MAGA__Patriot" class="u-url mention">@<span>MAGA__Patriot</span></a></span><br />America 1st🇺🇸 TRUMP2024 🇺🇸Conservative 🇺🇸Patriot🦅 BackTheBlue 👮1A ❤️2A🤍Prolife💙<br />Followed by @bj</p>', 'url': 'https://truthsocial.com/@MAGA__Patriot', 'avatar': 'https://static-assets-1.truthsocial.com/tmtg:prime-ts-assets/accounts/avatars/108/529/289/152/888/216/original/399376843a7a31cf.jpeg', 'avatar_static': 'https://static-assets-1.truthsocial.com/tmtg:prime-ts-assets/accounts/avatars/108/529/289/152/888/216/original/399376843a7a31cf.jpeg', 'header': 'https://static-assets-1.truthsocial.com/tmtg:prime-ts-assets/accounts/headers/108/529/289/152/888/216/original/d7aa303586516bd5.jpeg', 'header_static': 'https://static-assets-1.truthsocial.com/tmtg:prime-ts-assets/accounts/headers/108/529/289/152/888/216/original/d7aa303586516bd5.jpeg', 'followers_count': 4828, 'following_count': 4492, 'statuses_count': 13390, 'last_status_at': '2026-01-06', 'verified': False, 'location': '', 'website': '', 'accepting_messages': True, 'chats_onboarded': True, 'feeds_onboarded': True, 'tv_onboarded': True, 'bookmarks_onboarded': False, 'show_nonmember_group_statuses': True, 'pleroma': {'accepts_chat_messages': True}, 'tv_account': False, 'receive_only_follow_mentions': False, 'group_reactions_onboarded': True, 'premium': False, 'accepted_status_edit_prompt': False, 'emojis': [], 'fields': []}
+        """
+
+        self.__check_login()
+        assert user_handle is not None
+        return self._get("/v1/accounts/lookup", params=dict(acct=user_handle))
+    
     def get_auth_id(self, username: str, password: str) -> str:
         """Logs in to Truth account and returns the session token"""    
         url = BASE_URL + "/oauth/token"
