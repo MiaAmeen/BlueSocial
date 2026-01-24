@@ -1,6 +1,8 @@
-# BlueSocial
+# BlueSocial [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18251738.svg)](https://doi.org/10.5281/zenodo.18363711)
 
 Code for the BlueSocial paper (dataset scraping + LLM annotation).  
+All scraped data + ground truth annotations may be accessed here: [TruthStance Conversational Data](https://zenodo.org/records/18363711?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6Ijk4MDE0YTQ5LTA5NTQtNGM3Yi05ZjgyLWZjMDI1NDg1M2I5MSIsImRhdGEiOnt9LCJyYW5kb20iOiI2YWMxNWJlZmFlYjU4YTExN2ZjZGU1NmZiNzgzZDQ1NCJ9.LZt-vKgUgtiVYsBuu6i52BKzQKNtFggmtLnTBOs7EmVQ5BH74ae0LkxBBqaoKaPNJCXzEDyOI6n9bWtBPGuLyw)
+
 **Status:** Work-in-progress (full release coming soon).
 
 ## Overview
